@@ -15,18 +15,40 @@
 </head>
 <body>
 
-<!-- ===== 选图界面（开局前） ===== -->
+<!-- ===== 选皮肤界面（开局前） ===== -->
 <section class="picker-screen" id="pickerScreen">
-  <div class="picker-card">
+  <!-- 视图1：皮肤库 -->
+  <div class="picker-card" id="skinListView">
     <header class="picker-head">
       <h1>随机大合成</h1>
-      <p class="picker-sub">给每一档选一个形象，相同的撞在一起，就越合越大</p>
+      <p class="picker-sub">选一套皮肤开始玩，相同形象撞在一起，越合越大</p>
     </header>
+
+    <div class="skin-list" id="skinList"></div>
+
+    <div class="picker-actions">
+      <button class="btn btn-primary btn-start" id="startBtn" type="button">开始游戏</button>
+      <button class="btn btn-newskin" id="newSkinBtn" type="button">＋ 自建皮肤</button>
+      <p class="picker-hint">点皮肤卡片可切换 · 自建皮肤保存在你的浏览器里</p>
+    </div>
+  </div>
+
+  <!-- 视图2：皮肤编辑器（11 槽位） -->
+  <div class="picker-card" id="skinEditorView" style="display:none">
+    <header class="picker-head">
+      <h1>自建皮肤</h1>
+      <p class="picker-sub">给每一档选一个形象（共 11 档，从小到大）</p>
+    </header>
+
+    <div class="editor-name-row">
+      <input class="name-input" id="skinNameInput" type="text" maxlength="12" placeholder="给皮肤起个名字">
+    </div>
 
     <div class="picker-slots" id="slots"></div>
 
     <div class="picker-actions">
-      <button class="btn btn-primary btn-start" id="startBtn" type="button">开始游戏</button>
+      <button class="btn btn-primary btn-start" id="saveSkinBtn" type="button">保存皮肤</button>
+      <button class="btn" id="backToSkinsBtn" type="button">返回</button>
       <p class="picker-hint" id="pickerHint">每个槽位点一下，从相册选一张图；不选也能玩（用彩色圆球代替）</p>
     </div>
   </div>
@@ -97,9 +119,6 @@
       <button class="btn" id="boardBtn" type="button">
         <span class="ico">🏆</span><span class="lbl">排行榜</span>
       </button>
-      <button class="btn" id="soundBtn" type="button" aria-pressed="true">
-        <span class="ico">🔊</span><span class="lbl">音效开</span>
-      </button>
       <button class="btn btn-primary" id="resetBtn" type="button" title="重新开始">
         <span class="ico">↻</span><span class="lbl">重开</span>
       </button>
@@ -145,7 +164,7 @@
         要是它逗你笑了一下，赏我杯奶茶呗 🖤</p>
       <img class="sponsor-qr" src="assets/sponsor-qr.png" width="480" height="480"
            alt="收款码" loading="lazy" decoding="async">
-      <p class="sponsor-hint">微信扫一扫 · 一杯奶茶 · 全凭心意</p>
+      <p class="sponsor-hint">微信扫一扫 · 全凭心意</p>
     </div>
     <footer class="modal-foot">
       <span class="board-note">谢谢每一位支持我的人 ❤️</span>

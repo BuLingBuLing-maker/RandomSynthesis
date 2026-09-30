@@ -97,14 +97,13 @@
   const nextCtx    = nextCanvas.getContext('2d');
   const chainCanvas = document.getElementById('chain');
   const chainCtx    = chainCanvas.getContext('2d');
-  const soundBtn   = document.getElementById('soundBtn');
+  const soundBtn   = null;
   const resetBtn   = document.getElementById('resetBtn');
   const restartBtn = document.getElementById('restartBtn');
   const changeBtn  = document.getElementById('changeBtn');
   const changeTopBtn = document.getElementById('changeTopBtn');
 
-  /* 玩家上传的贴图：dataURL 数组，长度 = FRUITS.length，未选为 null */
-  let customImages = (window.__CUSTOM_IMAGES__ && window.__CUSTOM_IMAGES__.slice()) || null;
+  /* 多皮肤系统：FRUITS[i].img 由当前皮肤决定（见「多皮肤系统」段落） */
 
   /* ---------------------------------------------------------
    *  工具
@@ -1080,104 +1079,124 @@
     }
   });
 
-  function paintSoundBtn() {
-    const ico = soundBtn.querySelector('.ico');
-    const lbl = soundBtn.querySelector('.lbl');
-    if (ico) ico.textContent = Sound.muted ? '🔇' : '🔊';
-    if (lbl) lbl.textContent = Sound.muted ? '音效关' : '音效开';
-    soundBtn.setAttribute('aria-pressed', String(!Sound.muted));
-  }
-
-  soundBtn.addEventListener('click', () => {
-    Sound.muted = !Sound.muted;
-    localStorage.setItem(MUTE_KEY, Sound.muted ? '1' : '0');
-    paintSoundBtn();
-    if (!Sound.muted) Sound.merge(1);
-  });
-
   resetBtn.addEventListener('click', reset);
   restartBtn.addEventListener('click', reset);
 
   /* ---------------------------------------------------------
-   *  素材加载（支持玩家上传图）
+   *  多皮肤系统
+   *  皮肤 = 一组 11 档贴图（dataURL 或文件路径）。未选档位用程序化圆球。
+   *  内置皮肤：奶娃（原贴图）、彩色圆球（程序化）。
+   *  玩家自建皮肤：存 localStorage，可建多套，可切换。
    * ------------------------------------------------------- */
 
-  function loadSprites() {
-    let left = 0;
-    for (let i = 0; i < FRUITS.length; i++) {
-      const f = FRUITS[i];
-      /* 自定义形象模式：只有上传了图的档位才加载贴图，未选档位直接用程序化圆球 */
-      let src = null;
-      if (customImages && customImages[i]) src = customImages[i];
-      else if (!customImages) src = f.file;   /* 完全没有自定义图时才用默认贴图 */
-      if (!src) continue;
-      left++;
-      const img = new Image();
-      img.onload = () => {
-        const ready = () => {
-          f.img = img;
-          left--;
-          if (left === 0) refreshPreviews();
-        };
-        if (img.decode) img.decode().then(ready, ready);
-        else ready();
-      };
-      img.onerror = () => {
-        left--;
-        if (window.console) console.warn('[randomsyn] 素材载入失败，已回退为程序化圆球：' + src.slice(0, 40));
-      };
-      img.src = src;
-    }
-    return left;
-  }
-
-  function refreshPreviews() {
-    drawNext();
-    drawChain();
-  }
-
-  /* ---------------------------------------------------------
-   *  选图界面
-   * ------------------------------------------------------- */
+  const SKINS_KEY = 'randomsyn.skins.v1';
+  const ACTIVE_KEY = 'randomsyn.activeSkin.v1';
 
   const pickerScreen = document.getElementById('pickerScreen');
+  const skinListView = document.getElementById('skinListView');
+  const skinEditorView = document.getElementById('skinEditorView');
+  const skinListEl = document.getElementById('skinList');
   const slotsEl = document.getElementById('slots');
   const startBtn = document.getElementById('startBtn');
+  const newSkinBtn = document.getElementById('newSkinBtn');
+  const saveSkinBtn = document.getElementById('saveSkinBtn');
+  const backToSkinsBtn = document.getElementById('backToSkinsBtn');
+  const skinNameInput = document.getElementById('skinNameInput');
   const fileInput = document.getElementById('fileInput');
 
-  /* 把玩家上传的图处理成透明底圆形贴图（512×512） */
-  function imageToRoundDataURL(img, size) {
-    size = size || 512;
-    const cv = document.createElement('canvas');
-    cv.width = size; cv.height = size;
-    const c = cv.getContext('2d');
-    c.clearRect(0, 0, size, size);
+  /* —— 内置皮肤定义 —— */
+  /* 奶娃：默认皮肤，文件路径指向 assets/skins/naiwa/1..11.png */
+  const NAIWA_SKIN = {
+    id: 'naiwa',
+    name: '奶娃',
+    builtin: true,
+    imgs: []   /* 加载时填充 Image 对象 */
+  };
+  /* 彩色圆球：程序化皮肤，无贴图，用 FRUITS 的 c1/c2 配色 */
+  const BALL_SKIN = { id: 'balls', name: '彩色圆球', builtin: true, imgs: [] };
 
-    /* 圆形裁切 */
-    c.save();
-    c.beginPath();
-    c.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
-    c.clip();
+  /* —— 皮肤库 —— */
+  let skins = [];        /* [{id,name,builtin,imgs:[img|null...],src:[path|dataURL|null]}] */
+  let activeSkinId = localStorage.getItem(ACTIVE_KEY) || 'naiwa';
 
-    /* cover 缩放，居中 */
-    const iw = img.width, ih = img.height;
-    const scale = Math.max(size / iw, size / ih);
-    const dw = iw * scale, dh = ih * scale;
-    c.drawImage(img, (size - dw) / 2, (size - dh) / 2, dw, dh);
-    c.restore();
+  function loadSavedSkins() {
+    let arr = [];
+    try { arr = JSON.parse(localStorage.getItem(SKINS_KEY) || '[]'); } catch (e) { arr = []; }
+    return arr.filter(s => s && s.id && Array.isArray(s.images)).map(s => ({
+      id: s.id, name: s.name || '我的皮肤', builtin: false,
+      src: s.images, imgs: []
+    }));
+  }
+  function saveSkinList() {
+    const custom = skins.filter(s => !s.builtin).map(s => ({ id: s.id, name: s.name, images: s.src }));
+    try { localStorage.setItem(SKINS_KEY, JSON.stringify(custom)); } catch (e) { /* 空间不足 */ }
+  }
+  function uid() { return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
-    /* 细描边，让贴图更有"球"感 */
-    c.beginPath();
-    c.arc(size / 2, size / 2, size / 2 - 4, 0, Math.PI * 2);
-    c.lineWidth = 6;
-    c.strokeStyle = 'rgba(255,255,255,.35)';
-    c.stroke();
-
-    return cv.toDataURL('image/png');
+  /* —— 皮肤管理 —— */
+  function buildSkinList() {
+    skins = [NAIWA_SKIN, BALL_SKIN].concat(loadSavedSkins());
+    if (!skins.some(s => s.id === activeSkinId)) activeSkinId = 'naiwa';
   }
 
+  /* 应用一套皮肤：把它的贴图覆盖到 FRUITS 上 */
+  function applySkin(skin) {
+    activeSkinId = skin.id;
+    localStorage.setItem(ACTIVE_KEY, skin.id);
+    for (let i = 0; i < FRUITS.length; i++) {
+      FRUITS[i].img = (skin.imgs && skin.imgs[i]) || null;
+    }
+    drawChain();
+    drawNext();
+  }
+
+  /* 渲染皮肤库列表（视图1） */
+  function renderSkinList() {
+    skinListEl.innerHTML = '';
+    skins.forEach(skin => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'skin-card' + (skin.id === activeSkinId ? ' active' : '');
+
+      const thumb = document.createElement('span');
+      thumb.className = 'skin-thumb';
+      if (skin.builtin && skin.id === 'naiwa') {
+        thumb.textContent = '🍼';
+      } else if (skin.builtin && skin.id === 'balls') {
+        thumb.textContent = '🔵';
+      } else {
+        /* 自建皮肤：取第一档有图的作预览，否则用彩色球 */
+        const src = skin.src && skin.src.find(v => v);
+        thumb.style.backgroundImage = src ? 'url(' + src + ')' : '';
+        thumb.style.backgroundSize = 'cover';
+        thumb.style.backgroundPosition = 'center';
+      }
+
+      const name = document.createElement('span');
+      name.className = 'skin-name';
+      name.textContent = skin.name;
+
+      const tag = document.createElement('span');
+      tag.className = 'skin-tag';
+      tag.textContent = skin.builtin ? (skin.id === 'naiwa' ? '默认' : '内置') : '自建';
+
+      card.appendChild(thumb);
+      card.appendChild(name);
+      card.appendChild(tag);
+
+      card.addEventListener('click', () => {
+        applySkin(skin);
+        renderSkinList();
+      });
+
+      skinListEl.appendChild(card);
+    });
+  }
+
+  /* —— 皮肤编辑器（视图2）：自建 / 编辑 一套 11 档皮肤 —— */
   let selectedSlot = 0;
   const slotImages = new Array(FRUITS.length).fill(null);
+  let editingSkinId = null;
 
   function buildSlots() {
     slotsEl.innerHTML = '';
@@ -1228,6 +1247,34 @@
     }
   }
 
+  /* 把玩家上传的图处理成透明底圆形贴图（512×512） */
+  function imageToRoundDataURL(img, size) {
+    size = size || 512;
+    const cv = document.createElement('canvas');
+    cv.width = size; cv.height = size;
+    const c = cv.getContext('2d');
+    c.clearRect(0, 0, size, size);
+
+    c.save();
+    c.beginPath();
+    c.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    c.clip();
+
+    const iw = img.width, ih = img.height;
+    const scale = Math.max(size / iw, size / ih);
+    const dw = iw * scale, dh = ih * scale;
+    c.drawImage(img, (size - dw) / 2, (size - dh) / 2, dw, dh);
+    c.restore();
+
+    c.beginPath();
+    c.arc(size / 2, size / 2, size / 2 - 4, 0, Math.PI * 2);
+    c.lineWidth = 6;
+    c.strokeStyle = 'rgba(255,255,255,.35)';
+    c.stroke();
+
+    return cv.toDataURL('image/png');
+  }
+
   fileInput.addEventListener('change', () => {
     const file = fileInput.files && fileInput.files[0];
     fileInput.value = '';
@@ -1247,24 +1294,101 @@
     reader.readAsDataURL(file);
   });
 
+  /* 视图切换 */
+  function showSkinList() {
+    skinEditorView.style.display = 'none';
+    skinListView.style.display = '';
+    renderSkinList();
+  }
+  function showSkinEditor() {
+    skinListView.style.display = 'none';
+    skinEditorView.style.display = '';
+  }
+
+  newSkinBtn.addEventListener('click', () => {
+    editingSkinId = null;
+    slotImages.fill(null);
+    skinNameInput.value = '';
+    renderSlots();
+    showSkinEditor();
+  });
+
+  backToSkinsBtn.addEventListener('click', showSkinList);
+
+  saveSkinBtn.addEventListener('click', () => {
+    const name = (skinNameInput.value || '').trim() || '我的皮肤';
+    let skin;
+    if (editingSkinId) {
+      skin = skins.find(s => s.id === editingSkinId);
+      if (skin) { skin.name = name; skin.src = slotImages.slice(); }
+    } else {
+      skin = {
+        id: uid(), name: name, builtin: false,
+        src: slotImages.slice(), imgs: new Array(FRUITS.length).fill(null)
+      };
+      skins.push(skin);
+    }
+    saveSkinList();
+    /* 应用该皮肤并加载贴图 */
+    applySkin(skin);
+    loadSkinImages(skin, () => { applySkin(skin); });
+    showSkinList();
+  });
+
+  /* 加载某皮肤所有贴图的 Image 对象（用于绘制） */
+  function loadSkinImages(skin, done) {
+    let left = 0;
+    skin.imgs = new Array(FRUITS.length).fill(null);
+    if (!skin.builtin) {
+      for (let i = 0; i < FRUITS.length; i++) {
+        const src = skin.src && skin.src[i];
+        if (!src) continue;
+        left++;
+        const img = new Image();
+        img.onload = () => { skin.imgs[i] = img; if (--left === 0 && done) done(); };
+        img.onerror = () => { if (--left === 0 && done) done(); };
+        img.src = src;
+      }
+    } else if (skin.id === 'naiwa') {
+      /* 奶娃皮肤：从文件加载 */
+      for (let i = 0; i < FRUITS.length; i++) {
+        const src = 'assets/skins/naiwa/' + (i + 1) + '.png';
+        left++;
+        const img = new Image();
+        img.onload = () => { skin.imgs[i] = img; if (--left === 0 && done) done(); };
+        img.onerror = () => { if (--left === 0 && done) done(); };
+        img.src = src;
+      }
+    } else {
+      /* 彩色圆球：无贴图 */
+      if (done) done();
+    }
+    if (left === 0 && done) done();
+  }
+
   function enterGame() {
-    /* 用玩家图覆盖贴图；未选的档位回退到程序化圆球 */
-    customImages = slotImages.slice();
-    window.__CUSTOM_IMAGES__ = customImages;
+    const skin = skins.find(s => s.id === activeSkinId) || skins[0];
+    /* 若皮肤贴图还没加载（如奶娃是异步文件），确保加载后应用 */
+    applySkin(skin);
+    if (!skin.builtin || skin.id === 'naiwa') {
+      loadSkinImages(skin, () => applySkin(skin));
+    }
     pickerScreen.classList.remove('show');
     reset();
-    loadSprites();
   }
 
   startBtn.addEventListener('click', enterGame);
 
   function openPicker() {
     state.over = true;   /* 冻结当前局 */
+    buildSkinList();
+    showSkinList();
     pickerScreen.classList.add('show');
   }
 
   if (changeBtn) changeBtn.addEventListener('click', openPicker);
   if (changeTopBtn) changeTopBtn.addEventListener('click', openPicker);
+
 
   /* ---------------------------------------------------------
    *  启动
@@ -1278,22 +1402,19 @@
     window.addEventListener('resize', resizeCanvas);
     window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 120));
 
-    paintSoundBtn();
-
+    buildSkinList();
     buildSlots();
     renderSlots();
-
     drawChain();
 
-    /* 若已有自定义图（例如重新进入），直接进游戏 */
-    if (customImages && customImages.some(v => v)) {
-      pickerScreen.classList.remove('show');
-      reset();
-      loadSprites();
-    } else {
-      pickerScreen.classList.add('show');
-      reset();
-    }
+    /* 加载默认激活皮肤（通常是奶娃）的贴图，并应用 */
+    const active = skins.find(s => s.id === activeSkinId) || skins[0];
+    loadSkinImages(active, () => applySkin(active));
+
+    /* 开局先展示皮肤库，玩家选好再开始 */
+    showSkinList();
+    pickerScreen.classList.add('show');
+    reset();
 
     requestAnimationFrame((t) => { last = t; requestAnimationFrame(frame); });
   }
@@ -1305,5 +1426,5 @@
   }
 
   /* 调试句柄 */
-  window.__RS__ = { state, reset, tryDrop, stepPhysics, FRUITS, render, resizeCanvas, shapeOf, makeBall, customImages: () => customImages };
+  window.__RS__ = { state, reset, tryDrop, stepPhysics, FRUITS, render, resizeCanvas, shapeOf, makeBall };
 })();

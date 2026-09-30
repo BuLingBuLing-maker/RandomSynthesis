@@ -840,16 +840,15 @@ body {
     white-space: nowrap;
   }
 
-  #boardBtn .lbl,
-  #soundBtn .lbl { display: none; }
+  #boardBtn .lbl { display: none; }
 
-  #boardBtn, #soundBtn {
+  #boardBtn {
     min-width: 46px;
     padding: 0 10px;
     font-size: 17px;
   }
 
-  #boardBtn .ico, #soundBtn .ico { margin-right: 0; }
+  #boardBtn .ico { margin-right: 0; }
 
   .overlay { padding: 14px; }
 
@@ -933,13 +932,13 @@ body {
 
   .btn { min-height: 44px; padding: 0 10px; font-size: 13px; }
 
-  #boardBtn, #soundBtn { min-width: 42px; font-size: 16px; }
+  #boardBtn { min-width: 42px; font-size: 16px; }
 }
 
 @media (max-width: 860px) and (orientation: landscape) {
-  #boardBtn, #soundBtn { min-width: 0; padding: 0 10px; font-size: 13px; }
-  #boardBtn .lbl, #soundBtn .lbl { display: inline; }
-  #boardBtn .ico, #soundBtn .ico { margin-right: 4px; }
+  #boardBtn { min-width: 0; padding: 0 10px; font-size: 13px; }
+  #boardBtn .lbl { display: inline; }
+  #boardBtn .ico { margin-right: 4px; }
 }
 
 @media (max-width: 860px) and (orientation: landscape) and (max-height: 430px) {
