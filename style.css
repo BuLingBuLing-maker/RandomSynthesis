@@ -330,6 +330,13 @@ body {
 
 .btn .ico { margin-right: 4px; }
 
+.picker-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 16px;
+}
+
 .btn:hover  { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(140, 96, 56, .2); }
 .btn:active { transform: translateY(1px) scale(.985); }
 
