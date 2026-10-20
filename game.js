@@ -1218,37 +1218,31 @@
       card.appendChild(name);
       card.appendChild(tag);
 
+      /* 自建皮肤右上角加编辑/删除按钮 */
+      if (!skin.builtin) {
+        const menuBtn = document.createElement('button');
+        menuBtn.type = 'button';
+        menuBtn.className = 'skin-menu-btn';
+        menuBtn.textContent = '⋯';
+        menuBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const action = prompt('编辑「' + skin.name + '」：\n输入 e 编辑贴图\n输入 d 删除皮肤');
+          if (action === 'e' || action === 'E') {
+            openEditorForSkin(skin);
+          } else if (action === 'd' || action === 'D') {
+            if (confirm('确定删除皮肤「' + skin.name + '」？')) {
+              deleteSkin(skin.id);
+              renderSkinList();
+            }
+          }
+        });
+        card.appendChild(menuBtn);
+      }
+
       card.addEventListener('click', () => {
         applySkin(skin);
         renderSkinList();
       });
-
-      /* 长按自建皮肤：弹出编辑/删除菜单 */
-      if (!skin.builtin) {
-        let pressTimer = null;
-        const startPress = (e) => {
-          e.preventDefault();
-          pressTimer = setTimeout(() => {
-            const action = prompt('编辑「' + skin.name + '」：\n输入 e 编辑贴图\n输入 d 删除皮肤');
-            if (action === 'e' || action === 'E') {
-              editingSkinId = skin.id;
-              openEditorForSkin(skin);
-            } else if (action === 'd' || action === 'D') {
-              if (confirm('确定删除皮肤「' + skin.name + '」？')) {
-                deleteSkin(skin.id);
-                renderSkinList();
-              }
-            }
-          }, 600);
-        };
-        const cancelPress = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
-        card.addEventListener('mousedown', startPress);
-        card.addEventListener('touchstart', startPress, { passive: true });
-        card.addEventListener('mouseup', cancelPress);
-        card.addEventListener('mouseleave', cancelPress);
-        card.addEventListener('touchend', cancelPress);
-        card.addEventListener('touchcancel', cancelPress);
-      }
 
       skinListEl.appendChild(card);
     });
