@@ -78,6 +78,19 @@
   function saveName(n) { try { localStorage.setItem(NAME_KEY, n); } catch (e) { } }
   function myName() { return loadName() || DEFAULT_NAME; }
 
+  /* 检查某昵称是否已在排行榜中被使用（自己的名字不算） */
+  function checkNameExists(name) {
+    var q = '/rest/v1/' + TABLE + '?select=name&name=eq.' + encodeURIComponent(name) + '&limit=1';
+    return fetch(SUPA_URL + q, { headers: supaHeaders() })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function (rows) {
+        return (rows || []).length > 0;
+      });
+  }
+
   var listEl = $('boardList');
   var modal = $('boardModal');
   var msgEl = $('submitMsg');
@@ -201,9 +214,28 @@
     if (nickInput) {
       nickInput.value = loadName();
       var commit = function () {
-        saveName(cleanName(nickInput.value));
-        nickInput.value = loadName();
-        paintName();
+        var raw = cleanName(nickInput.value);
+        if (!raw) { saveName(''); nickInput.value = loadName(); paintName(); return; }
+        if (raw === loadName()) { nickInput.value = raw; return; }
+        /* 检查该名字是否已被使用 */
+        setMsg('检查名称…', '');
+        checkNameExists(raw).then(function (exists) {
+          if (exists) {
+            setMsg('「' + raw + '」已被使用，换一个吧', 'bad');
+            nickInput.value = loadName();
+            nickInput.focus();
+            return;
+          }
+          saveName(raw);
+          nickInput.value = raw;
+          paintName();
+          setMsg('昵称已更新 ✓', 'good');
+        }).catch(function () {
+          /* 网络失败就先保存本地，下次再校验 */
+          saveName(raw);
+          nickInput.value = raw;
+          paintName();
+        });
       };
       nickInput.addEventListener('change', commit);
       nickInput.addEventListener('blur', commit);
