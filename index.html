@@ -11,7 +11,7 @@
 <meta name="description" content="随机大合成 · 上传你自己的形象，逐档合成，越合越大。">
 <title>随机大合成</title>
 <link rel="icon" type="image/png" href="favicon.png">
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 
@@ -48,8 +48,10 @@
 
     <div class="picker-actions">
       <button class="btn btn-primary btn-start" id="saveSkinBtn" type="button">保存皮肤</button>
-      <button class="btn" id="backToSkinsBtn" type="button">返回</button>
-      <button class="btn btn-danger" id="deleteSkinBtn" type="button">删除此皮肤</button>
+      <div style="display:flex; gap:10px; width:100%;">
+        <button class="btn" id="backToSkinsBtn" type="button" style="flex:1;">返回</button>
+        <button class="btn btn-danger" id="deleteSkinBtn" type="button" style="flex:1;">删除此皮肤</button>
+      </div>
       <p class="picker-hint" id="pickerHint">每个槽位点一下，从相册选一张图；不选也能玩（用彩色圆球代替）</p>
     </div>
   </div>
@@ -177,8 +179,8 @@
 <input type="file" id="fileInput" accept="image/*" hidden>
 
 <script src="parts.js"></script>
-<script src="game.js?v=3"></script>
-<script src="leaderboard.js?v=3"></script>
-<script src="sponsor.js?v=3"></script>
+<script src="game.js?v=4"></script>
+<script src="leaderboard.js?v=4"></script>
+<script src="sponsor.js?v=4"></script>
 </body>
 </html>
