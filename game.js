@@ -1223,7 +1223,7 @@
         const menuBtn = document.createElement('button');
         menuBtn.type = 'button';
         menuBtn.className = 'skin-menu-btn';
-        menuBtn.textContent = '⋯';
+        menuBtn.textContent = '编辑/删除';
         menuBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           const action = prompt('编辑「' + skin.name + '」：\n输入 e 编辑贴图\n输入 d 删除皮肤');
