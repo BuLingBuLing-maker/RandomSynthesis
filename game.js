@@ -1136,6 +1136,34 @@
   }
   function uid() { return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
+  /* 删除一套自建皮肤 */
+  function deleteSkin(id) {
+    const idx = skins.findIndex(s => s.id === id);
+    if (idx < 0) return;
+    skins.splice(idx, 1);
+    if (activeSkinId === id) {
+      activeSkinId = 'naiwa';
+      localStorage.setItem(ACTIVE_KEY, activeSkinId);
+      const naiwa = skins.find(s => s.id === 'naiwa');
+      applySkin(naiwa);
+      loadSkinImages(naiwa, () => applySkin(naiwa));
+    }
+    saveSkinList();
+  }
+
+  /* 打开编辑器编辑一套自建皮肤 */
+  function openEditorForSkin(skin) {
+    editingSkinId = skin.id;
+    skinNameInput.value = skin.name;
+    slotImages.fill(null);
+    for (let i = 0; i < FRUITS.length; i++) {
+      slotImages[i] = skin.src && skin.src[i] ? skin.src[i] : null;
+    }
+    renderSlots();
+    skinListView.style.display = 'none';
+    skinEditorView.style.display = '';
+  }
+
   /* —— 皮肤管理 —— */
   function buildSkinList() {
     skins = [NAIWA_SKIN, BALL_SKIN].concat(loadSavedSkins());
@@ -1194,6 +1222,33 @@
         applySkin(skin);
         renderSkinList();
       });
+
+      /* 长按自建皮肤：弹出编辑/删除菜单 */
+      if (!skin.builtin) {
+        let pressTimer = null;
+        const startPress = (e) => {
+          e.preventDefault();
+          pressTimer = setTimeout(() => {
+            const action = prompt('编辑「' + skin.name + '」：\n输入 e 编辑贴图\n输入 d 删除皮肤');
+            if (action === 'e' || action === 'E') {
+              editingSkinId = skin.id;
+              openEditorForSkin(skin);
+            } else if (action === 'd' || action === 'D') {
+              if (confirm('确定删除皮肤「' + skin.name + '」？')) {
+                deleteSkin(skin.id);
+                renderSkinList();
+              }
+            }
+          }, 600);
+        };
+        const cancelPress = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
+        card.addEventListener('mousedown', startPress);
+        card.addEventListener('touchstart', startPress, { passive: true });
+        card.addEventListener('mouseup', cancelPress);
+        card.addEventListener('mouseleave', cancelPress);
+        card.addEventListener('touchend', cancelPress);
+        card.addEventListener('touchcancel', cancelPress);
+      }
 
       skinListEl.appendChild(card);
     });

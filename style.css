@@ -768,7 +768,10 @@ body {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: #f0efea;
+  background-color: #f0efea;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;
