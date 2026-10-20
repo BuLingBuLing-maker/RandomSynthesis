@@ -1223,19 +1223,18 @@
         const menuBtn = document.createElement('button');
         menuBtn.type = 'button';
         menuBtn.className = 'skin-menu-btn';
-        menuBtn.textContent = '编辑/删除';
+      /* 自建皮肤加编辑按钮 */
+      if (!skin.builtin) {
+        const menuBtn = document.createElement('button');
+        menuBtn.type = 'button';
+        menuBtn.className = 'skin-menu-btn';
+        menuBtn.textContent = '编辑';
         menuBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          const action = prompt('编辑「' + skin.name + '」：\n输入 e 编辑贴图\n输入 d 删除皮肤');
-          if (action === 'e' || action === 'E') {
-            openEditorForSkin(skin);
-          } else if (action === 'd' || action === 'D') {
-            if (confirm('确定删除皮肤「' + skin.name + '」？')) {
-              deleteSkin(skin.id);
-              renderSkinList();
-            }
-          }
+          openEditorForSkin(skin);
         });
+        card.appendChild(menuBtn);
+      }
         card.appendChild(menuBtn);
       }
 
@@ -1389,6 +1388,21 @@
     loadSkinImages(skin, () => { applySkin(skin); });
     showSkinList();
   });
+
+  /* 删除当前正在编辑的皮肤 */
+  const deleteSkinBtn = document.getElementById('deleteSkinBtn');
+  if (deleteSkinBtn) {
+    deleteSkinBtn.addEventListener('click', () => {
+      if (!editingSkinId) return;
+      const skin = skins.find(s => s.id === editingSkinId);
+      if (!skin) return;
+      if (confirm('确定删除皮肤「' + skin.name + '」？')) {
+        deleteSkin(skin.id);
+        editingSkinId = null;
+        showSkinList();
+      }
+    });
+  }
 
   /* 加载某皮肤所有贴图的 Image 对象（用于绘制） */
   function loadSkinImages(skin, done) {

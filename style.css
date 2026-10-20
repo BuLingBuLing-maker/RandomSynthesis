@@ -343,6 +343,12 @@ body {
   background: linear-gradient(135deg, #ff8a5b, var(--brand) 55%, var(--brand-dark));
 }
 
+.btn-danger {
+  color: #fff;
+  border-color: transparent;
+  background: #e53935;
+}
+
 /* ---------------- 结算区 ---------------- */
 
 .submit-box {
