@@ -227,7 +227,7 @@
    *  碰撞形状：一律用圆形（与圆形贴图吻合）
    * ------------------------------------------------------- */
 
-  const SHAPES = [];
+  const SHAPES = (typeof window !== 'undefined' && window.SUIKA_PARTS) ? window.SUIKA_PARTS : [];
   const UNIT_SHAPE = { rb: 1, parts: [[0, 0, 1]] };
 
   function shapeOf(tier) {
