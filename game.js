@@ -1164,7 +1164,10 @@
       const thumb = document.createElement('span');
       thumb.className = 'skin-thumb';
       if (skin.builtin && skin.id === 'naiwa') {
-        thumb.textContent = '🍼';
+        thumb.style.backgroundImage = 'url(assets/skins/naiwa/1.png)';
+        thumb.style.backgroundSize = 'contain';
+        thumb.style.backgroundPosition = 'center';
+        thumb.style.backgroundRepeat = 'no-repeat';
       } else if (skin.builtin && skin.id === 'balls') {
         thumb.textContent = '🔵';
       } else {
