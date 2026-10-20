@@ -1411,9 +1411,7 @@
     const active = skins.find(s => s.id === activeSkinId) || skins[0];
     loadSkinImages(active, () => applySkin(active));
 
-    /* 开局先展示皮肤库，玩家选好再开始 */
-    showSkinList();
-    pickerScreen.classList.add('show');
+    /* 开局直接进游戏，不弹皮肤选择框；玩家通过“换形象”按钮自己改皮肤 */
     reset();
 
     requestAnimationFrame((t) => { last = t; requestAnimationFrame(frame); });
