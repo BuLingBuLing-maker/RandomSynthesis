@@ -1,20 +1,16 @@
 /* ============================================================
- *  随机大合成 · 在线排行榜
- *  数据存在 MIT 免费服务 TinyWebDB（App Inventor）——
- *  纯前端 POST 读写，免费、无需自建服务器。
- *  这是属于本站的独立数据空间（独立 user/secret/前缀），
- *  与原作「合成大奶娃」的排行榜数据互不影响。
+ *  随机大合成 · 在线排行榜（Supabase 版）
+ *  数据存在 Supabase Postgres（免费套餐），纯前端 REST 读写，
+ *  全球共享排行榜，比旧版 TinyWebDB 稳定可靠。
+ *  表 scores：id / name / score / created_at
  * ============================================================ */
 (function () {
   'use strict';
 
-  /* —— 免费服务器配置（如需更换请修改这里）——
-     到 https://tinywebdb.appinventor.mit.edu 注册自己的账号，
-     然后把 user / secret 填成你自己的，即可独享数据空间。 */
-  var SERVER   = 'https://tinywebdb.appinventor.mit.edu/api';
-  var USER     = 'xbypriokfu';
-  var SECRET   = '5nlrhtq37zak4f';
-  var PREFIX   = 'rs_260930_';   /* 标签前缀，换一个就是新榜 */
+  /* —— Supabase 配置（本站专用）—— */
+  var SUPA_URL = 'https://fsbsvotpgiuylztidqjq.supabase.co';
+  var SUPA_KEY = 'sb_publishable_tObhPL-V2iTS47lsJB8RSw_lFWUbBD4';
+  var TABLE    = 'scores';
 
   var NAME_KEY   = 'randomsyn.name.v1';
   var DEFAULT_NAME = '默认用户';
@@ -24,83 +20,48 @@
 
   var $ = function (id) { return document.getElementById(id); };
 
-  function post(params) {
-    var body = new URLSearchParams();
-    body.set('user', USER);
-    body.set('secret', SECRET);
-    for (var k in params) body.set(k, params[k]);
-    var once = function () {
-      return fetch(SERVER, { method: 'POST', body: body }).then(function (res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.text();
-      }).then(function (text) {
-        var s = (text || '').trim();
-        if (!s) return {};
-        try { return JSON.parse(s); }
-        catch (e) { throw new Error('服务器返回看不懂：' + s.slice(0, 60)); }
-      });
+  function supaHeaders() {
+    return {
+      'apikey': SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Content-Type': 'application/json'
     };
-    return once().catch(function (err) {
-      return new Promise(function (r) { setTimeout(r, 700); }).then(once).catch(function () {
-        throw err;
-      });
-    });
   }
 
+  /* 提交一条成绩 */
   function addScore(name, score) {
-    var tag = PREFIX + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
-    var value = JSON.stringify({ n: name, s: score, t: Date.now() });
-    return post({ action: 'storeavalue', tag: tag, value: value });
-  }
-
-  /* 分页拉取本榜全部 tag */
-  function fetchAll() {
-    var out = {};
-    var no = 1;
-    function step() {
-      return post({ action: 'gettaglist', no: String(no), count: '100' }).then(function (obj) {
-        var keys = [];
-        for (var k in obj) {
-          if (k.indexOf(PREFIX) === 0 && typeof obj[k] === 'string') keys.push(k);
-        }
-        for (var i = 0; i < keys.length; i++) out[keys[i]] = obj[keys[i]];
-        if (keys.length >= 100) { no += 100; return step(); }
-        return out;
-      });
-    }
-    return step();
-  }
-
-  function recordTime(tag, rec) {
-    var t = Number(rec && rec.t);
-    if (isFinite(t) && t > 0) return t;
-    var mid = String(tag).split('_')[1] || '';
-    if (/^\d{12,}$/.test(mid)) return Number(mid);
-    var s = parseInt(mid, 36);
-    return isFinite(s) ? s : 0;
-  }
-
-  function fetchTop() {
-    return fetchAll().then(function (obj) {
-      var all = [];
-      for (var tag in obj) {
-        var raw = obj[tag];
-        if (typeof raw !== 'string') continue;
-        var rec; try { rec = JSON.parse(raw); } catch (e) { continue; }
-        var s = Number(rec && rec.s);
-        if (!isFinite(s) || s < 0 || s > MAX_SCORE) continue;
-        all.push({
-          tag: tag,
-          name: String((rec && rec.n) || '匿名玩家').slice(0, 16),
-          score: s,
-          t: recordTime(tag, rec)
-        });
-      }
-      all.sort(function (a, b) { return (b.t - a.t) || (b.tag > a.tag ? 1 : -1); });
-      var fresh = all.slice(0, WINDOW);
-      fresh.sort(function (a, b) { return (b.score - a.score) || (b.t - a.t); });
-      return fresh;
+    return fetch(SUPA_URL + '/rest/v1/' + TABLE, {
+      method: 'POST',
+      headers: supaHeaders(),
+      body: JSON.stringify({ name: name, score: score })
+    }).then(function (res) {
+      if (!res.ok) return res.text().then(function (t) { throw new Error('HTTP ' + res.status + ' ' + t.slice(0, 80)); });
+      return true;
     });
+  }
+
+  /* 拉取最高分前 WINDOW 名 */
+  function fetchTop() {
+    var q = '/rest/v1/' + TABLE + '?select=name,score,created_at'
+          + '&order=score.desc&limit=' + WINDOW;
+    return fetch(SUPA_URL + q, { headers: supaHeaders() })
+      .then(function (res) {
+        if (!res.ok) return res.text().then(function (t) { throw new Error('HTTP ' + res.status + ' ' + t.slice(0, 80)); });
+        return res.json();
+      })
+      .then(function (rows) {
+        var all = [];
+        (rows || []).forEach(function (rec) {
+          var s = Number(rec && rec.score);
+          if (!isFinite(s) || s < 0 || s > MAX_SCORE) return;
+          all.push({
+            name: String((rec && rec.name) || '匿名玩家').slice(0, 16),
+            score: s,
+            t: rec && rec.created_at ? Date.parse(rec.created_at) || 0 : 0
+          });
+        });
+        return all;
+      });
   }
 
   function cleanName(raw) {
