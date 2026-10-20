@@ -231,8 +231,11 @@
   const UNIT_SHAPE = { rb: 1, parts: [[0, 0, 1]] };
 
   function shapeOf(tier) {
-    const s = SHAPES[tier];
-    if (s && s.parts && s.parts.length) return s;
+    /* 奶娃皮肤用贴图轮廓碰撞（原游戏方式），其他皮肤用圆形碰撞 */
+    if (activeSkinId === 'naiwa') {
+      const s = SHAPES[tier];
+      if (s && s.parts && s.parts.length) return s;
+    }
     return UNIT_SHAPE;
   }
 

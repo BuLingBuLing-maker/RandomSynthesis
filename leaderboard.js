@@ -40,27 +40,32 @@
     });
   }
 
-  /* 拉取最高分前 WINDOW 名 */
+  /* 拉取最高分前 WINDOW 名（按昵称去重，每人只留最高分） */
   function fetchTop() {
     var q = '/rest/v1/' + TABLE + '?select=name,score,created_at'
-          + '&order=score.desc&limit=' + WINDOW;
+          + '&order=score.desc&limit=' + (WINDOW * 5);
     return fetch(SUPA_URL + q, { headers: supaHeaders() })
       .then(function (res) {
         if (!res.ok) return res.text().then(function (t) { throw new Error('HTTP ' + res.status + ' ' + t.slice(0, 80)); });
         return res.json();
       })
       .then(function (rows) {
-        var all = [];
+        var best = {};
         (rows || []).forEach(function (rec) {
           var s = Number(rec && rec.score);
           if (!isFinite(s) || s < 0 || s > MAX_SCORE) return;
-          all.push({
-            name: String((rec && rec.name) || '匿名玩家').slice(0, 16),
-            score: s,
-            t: rec && rec.created_at ? Date.parse(rec.created_at) || 0 : 0
-          });
+          var n = String((rec && rec.name) || '匿名玩家').slice(0, 16);
+          if (!best[n] || s > best[n].score) {
+            best[n] = {
+              name: n,
+              score: s,
+              t: rec && rec.created_at ? Date.parse(rec.created_at) || 0 : 0
+            };
+          }
         });
-        return all;
+        return Object.keys(best).map(function (k) { return best[k]; })
+          .sort(function (a, b) { return b.score - a.score; })
+          .slice(0, WINDOW);
       });
   }
 
