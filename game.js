@@ -1218,11 +1218,6 @@
       card.appendChild(name);
       card.appendChild(tag);
 
-      /* 自建皮肤右上角加编辑/删除按钮 */
-      if (!skin.builtin) {
-        const menuBtn = document.createElement('button');
-        menuBtn.type = 'button';
-        menuBtn.className = 'skin-menu-btn';
       /* 自建皮肤加编辑按钮 */
       if (!skin.builtin) {
         const menuBtn = document.createElement('button');
@@ -1233,8 +1228,6 @@
           e.stopPropagation();
           openEditorForSkin(skin);
         });
-        card.appendChild(menuBtn);
-      }
         card.appendChild(menuBtn);
       }
 
